@@ -50,5 +50,11 @@ namespace ShopAtHome.MessageQueue
         /// </summary>
         /// <returns></returns>
         QueueMetadata GetQueueInfo();
+
+        /// <summary>
+        /// Returns the specified message to the head of the queue
+        /// </summary>
+        /// <param name="message"></param>
+        void ReturnMessageToQueue(Message<TMessageData> message);
     }
 }

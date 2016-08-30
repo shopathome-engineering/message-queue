@@ -151,5 +151,14 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
             var result = new QueueMetadata((int)count, _queueName);
             return result;
         }
+
+        /// <summary>
+        /// Returns the specified message to the head of the queue
+        /// </summary>
+        /// <param name="message"></param>
+        public void ReturnMessageToQueue(Message<TMessageData> message)
+        {
+            RabbitMQHelper.UseConnectionWithRetries(c => c.BasicReject(message.ConversationId, true), _channel);
+        }
     }
 }
