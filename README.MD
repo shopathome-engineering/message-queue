@@ -1,0 +1,1 @@
+# https://shopathome.atlassian.net/wiki/display/IT/MessageQueue
