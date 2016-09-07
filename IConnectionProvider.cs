@@ -11,8 +11,6 @@
         /// <typeparam name="TDataType"></typeparam>
         /// <param name="queueName">The name of the queue on the bus server</param>
         /// <returns></returns>
-        /// <remarks>Possible TODO: The data type is static for a queue, so it doesn't make sense to force the caller to set the data type *and* the queue.
-        /// Some kind of map perhaps, but how does that strongly typed generic get passed back to the client automatically? Hmm</remarks>
         IQueueConnection<TDataType> ConnectToQueue<TDataType>(string queueName);
 
         /// <summary>

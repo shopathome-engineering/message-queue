@@ -17,6 +17,17 @@
         }
 
         /// <summary>
+        /// Initializes the creation info with all of its required data
+        /// </summary>
+        /// <param name="queueIdentifier"></param>
+        /// <param name="durable"></param>
+        /// <param name="exchangeInfo"></param>
+        public QueueCreationInfo(string queueIdentifier, bool durable, ExchangeBindingInfo exchangeInfo) : this(queueIdentifier, durable)
+        {
+            BindingInfo = exchangeInfo;
+        }
+
+        /// <summary>
         /// If the queue should be made durable (persist through system loss). Incurs a performance penalty if set to true.
         /// </summary>
         public bool Durable { get; }

@@ -21,7 +21,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         private bool _disposing;
         private readonly object _syncLock = new object();
         private readonly JsonSerializer _jsonSerializer;
-        private static readonly BasicProperties MessageWriteProperties = new BasicProperties {Persistent = true};
+        private static readonly BasicProperties MessageWriteProperties = new BasicProperties { Persistent = true };
 
         /// <summary>
         /// Initializes the connection to the RabbitMQ queue specified by the queue name
@@ -72,7 +72,10 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         {
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += (s, message) => onReceive(_jsonSerializer.Get<TMessageData>(message.Body));
-            consumer.ConsumerCancelled += (sender, args) => onSubscriptionCancel();
+            if (onSubscriptionCancel != null)
+            {
+                consumer.ConsumerCancelled += (sender, args) => onSubscriptionCancel();
+            }
             _channel.BasicConsume(_queueName, true, consumer);
         }
 
@@ -121,8 +124,10 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <returns></returns>
         public MessageHeader PeekNextHeader()
         {
-            // TODO: This needs to read the next message in its queue, get its header data, then return the message to the queue as a Cancel so it gets put back at the head
-            throw new NotImplementedException("TODO: This needs to read the next message in its queue, get its header data, then return the message to the queue as a Cancel so it gets put back at the head");
+            var msg = ReadNext();
+            var header = msg?.Header;
+            ReturnMessageToQueue(msg);
+            return header;
         }
 
         /// <summary>
