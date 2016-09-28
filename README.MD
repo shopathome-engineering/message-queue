@@ -1,6 +1,8 @@
 # Summary
 Provides interfaces and a RabbitMQ implementation for interaction with message queue systems. Provides methods for reading and writing messages and abstraction around the messages themselves.
 
+This library is available on nuget.
+
 ----
 
 # API Documentation
