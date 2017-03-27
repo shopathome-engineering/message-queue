@@ -11,7 +11,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         private readonly ConnectionFactory _connectionFactory;
 
         /// <summary>
-        /// Initializes the factory against the specified RabbitMQ server
+        /// Initializes the factory against the specified RabbitMQ server using the default virtual host
         /// </summary>
         /// <param name="endpoint">The server to which we will try to connect. Uses the default port.</param>
         /// <param name="username">The username that will be used in connecting to RabbitMQ</param>
@@ -19,6 +19,18 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         public RabbitMQConnectionProvider(string endpoint, string username, string password)
         {
             _connectionFactory = new ConnectionFactory { HostName = endpoint, UserName = username, Password = password };
+        }
+
+        /// <summary>
+        /// Initializes the factory against the specified RabbitMQ server
+        /// </summary>
+        /// <param name="endpoint">The server to which we will try to connect. Uses the default port.</param>
+        /// <param name="username">The username that will be used in connecting to RabbitMQ</param>
+        /// <param name="password">The password that will be used in connecting to RabbitMQ</param>
+        /// <param name="vhost">The virtual host that will be used in connecting to RabbitMQ</param>
+        public RabbitMQConnectionProvider(string endpoint, string username, string password, string vhost)
+        {
+            _connectionFactory = new ConnectionFactory { HostName = endpoint, UserName = username, Password = password, VirtualHost = vhost};
         }
 
         /// <summary>
@@ -31,7 +43,8 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
             {
                 HostName = configuration.Endpoint,
                 UserName = configuration.Username,
-                Password = configuration.Password
+                Password = configuration.Password,
+                VirtualHost = configuration.VirtualHost
             };
         }
 

@@ -17,5 +17,10 @@
         /// The password that should be used in authenticating with the message bus
         /// </summary>
         string Password { get; }
+
+        /// <summary>
+        /// The virtual host (VHost) to which this connection will attach. If left null, uses the default vhost ("/")
+        /// </summary>
+        string VirtualHost { get; }
     }
 }
