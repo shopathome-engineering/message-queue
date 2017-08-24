@@ -1,14 +1,34 @@
 ﻿using System.Collections.Generic;
 using RabbitMQ.Client;
+using System;
 
 namespace ShopAtHome.MessageQueue.RabbitMQ
 {
     /// <summary>
     /// An implementation of a connection factory for RabbitMQ
     /// </summary>
-    public class RabbitMQConnectionProvider : IConnectionProvider
+    public class RabbitMQConnectionProvider : IConnectionProvider, IDisposable
     {
         private readonly ConnectionFactory _connectionFactory;
+        private IConnection _pooledConnection;
+        private IConnection PooledConnection
+        {
+            get
+            {
+                if (_pooledConnection == null || !_pooledConnection.IsOpen)
+                {
+                    lock (_syncLock)
+                    {
+                        if (_pooledConnection == null || !_pooledConnection.IsOpen)
+                        {
+                            _pooledConnection = _connectionFactory.CreateConnection();
+                        }
+                    }
+                }
+                return _pooledConnection;
+            }
+        }
+        private static object _syncLock = new object();
 
         /// <summary>
         /// Initializes the factory against the specified RabbitMQ server using the default virtual host
@@ -16,9 +36,8 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <param name="endpoint">The server to which we will try to connect. Uses the default port.</param>
         /// <param name="username">The username that will be used in connecting to RabbitMQ</param>
         /// <param name="password">The password that will be used in connecting to RabbitMQ</param>
-        public RabbitMQConnectionProvider(string endpoint, string username, string password)
+        public RabbitMQConnectionProvider(string endpoint, string username, string password) : this(endpoint, username, password, "/")
         {
-            _connectionFactory = new ConnectionFactory { HostName = endpoint, UserName = username, Password = password };
         }
 
         /// <summary>
@@ -30,22 +49,15 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <param name="vhost">The virtual host that will be used in connecting to RabbitMQ</param>
         public RabbitMQConnectionProvider(string endpoint, string username, string password, string vhost)
         {
-            _connectionFactory = new ConnectionFactory { HostName = endpoint, UserName = username, Password = password, VirtualHost = vhost};
+            _connectionFactory = new ConnectionFactory { HostName = endpoint, UserName = username, Password = password, VirtualHost = vhost };
         }
 
         /// <summary>
         /// Initializes the connection provider with the specified configuration
         /// </summary>
         /// <param name="configuration"></param>
-        public RabbitMQConnectionProvider(IConnectionProviderConfiguration configuration)
+        public RabbitMQConnectionProvider(IConnectionProviderConfiguration configuration) : this(configuration.Endpoint, configuration.Username, configuration.Password, configuration.VirtualHost)
         {
-            _connectionFactory = new ConnectionFactory
-            {
-                HostName = configuration.Endpoint,
-                UserName = configuration.Username,
-                Password = configuration.Password,
-                VirtualHost = configuration.VirtualHost
-            };
         }
 
         /// <summary>
@@ -56,7 +68,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <returns></returns>
         public IQueueConnection<TDataType> ConnectToQueue<TDataType>(string queueName)
         {
-            return new RabbitMQQueueConnection<TDataType>(_connectionFactory, queueName);
+            return new RabbitMQQueueConnection<TDataType>(PooledConnection, queueName);
         }
 
         /// <summary>
@@ -67,7 +79,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <returns></returns>
         public IExchangeConnection<TDataType> ConnectToExchange<TDataType>(string exchangeName)
         {
-            return new RabbitMQExchangeConnection<TDataType>(_connectionFactory, exchangeName);
+            return new RabbitMQExchangeConnection<TDataType>(PooledConnection, exchangeName);
         }
 
         /// <summary>
@@ -78,8 +90,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// this will throw</remarks>
         public void CreateQueue(QueueCreationInfo queueInfo)
         {
-            using (var conn = _connectionFactory.CreateConnection())
-            using (var channel = conn.CreateModel())
+            using (var channel = PooledConnection.CreateModel())
             {
                 RabbitMQHelper.UseConnectionWithRetries(c => c.QueueDeclare(queueInfo.Identifier, queueInfo.Durable, false, false, null), channel);
                 if (queueInfo.BindingInfo != null)
@@ -95,8 +106,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// <param name="queueIdentifier"></param>
         public void DeleteQueue(string queueIdentifier)
         {
-            using (var conn = _connectionFactory.CreateConnection())
-            using (var channel = conn.CreateModel())
+            using (var channel = PooledConnection.CreateModel())
             {
                 RabbitMQHelper.UseConnectionWithRetries(c => c.QueueDelete(queueIdentifier), channel);
             }
@@ -112,8 +122,7 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
         /// this will throw</remarks>
         public void CreateExchange(string name, string type, string alternateExchange = null)
         {
-            using (var conn = _connectionFactory.CreateConnection())
-            using (var channel = conn.CreateModel())
+            using (var channel = PooledConnection.CreateModel())
             {
                 Dictionary<string, object> args = null ;
                 if (!string.IsNullOrEmpty(alternateExchange))
@@ -122,6 +131,14 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
                 }
                 RabbitMQHelper.UseConnectionWithRetries(c => c.ExchangeDeclare(name, type, true, false, args), channel);
             }
+        }
+
+        /// <summary>
+        /// Disposes of the pooled connection to the message bus
+        /// </summary>
+        public void Dispose()
+        {
+            _pooledConnection?.Dispose();
         }
 
         /// <summary>

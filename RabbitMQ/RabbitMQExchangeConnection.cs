@@ -14,23 +14,16 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
     {
         private readonly string _exchangeName;
         private readonly JsonSerializer _jsonSerializer;
-        private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly object _syncLock = new object();
         private bool _disposing;
         private static readonly BasicProperties MessageWriteProperties = new BasicProperties { Persistent = true };
 
-        /// <summary>
-        /// Initializes the exchange connection with a connection factory
-        /// </summary>
-        /// <param name="connectionFactory"></param>
-        /// <param name="exchangeName"></param>
-        public RabbitMQExchangeConnection(IConnectionFactory connectionFactory, string exchangeName)
+        internal RabbitMQExchangeConnection(IConnection mqConnection, string exchangeName)
         {
             _exchangeName = exchangeName;
             _jsonSerializer = new JsonSerializer(Encoding.UTF8);
-            _connection = connectionFactory.CreateConnection();
-            _channel = _connection.CreateModel();
+            _channel = mqConnection.CreateModel();
         }
 
         /// <summary>
@@ -61,7 +54,6 @@ namespace ShopAtHome.MessageQueue.RabbitMQ
 
                 _disposing = true;
                 _channel.Dispose();
-                _connection.Dispose();
             }
         }
     }
